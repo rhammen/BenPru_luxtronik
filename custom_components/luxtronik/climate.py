@@ -126,6 +126,7 @@ class LuxtronikThermostat(ClimateEntity, RestoreEntity):
 
     _attr_target_temperature = None
     _attr_current_temperature = None
+    _attr_current_target_correction = None
     _attr_supported_features = SUPPORT_FLAGS
     _attr_temperature_unit = TEMP_CELSIUS
     _attr_hvac_mode = HVAC_MODE_OFF
@@ -163,6 +164,9 @@ class LuxtronikThermostat(ClimateEntity, RestoreEntity):
     @property
     def current_temperature(self) -> float:
         """Return the current temperature."""
+        LOGGER.info(f"{self}: def current_temperature")
+
+        # Get the current temperature and update self._attr_current_temperature       
         if self._current_temperature_sensor is None:
             self._attr_current_temperature = None
         elif self.__is_luxtronik_sensor(self._current_temperature_sensor):
@@ -175,13 +179,36 @@ class LuxtronikThermostat(ClimateEntity, RestoreEntity):
                 self._attr_current_temperature = None
             else:
                 self._attr_current_temperature = float(current_temperature_sensor.state)
+        #LOGGER.info(f"self._attr_current_temperature={self._attr_current_temperature}")
+        
+        # If Heating: (re-)calculate the target correction.
+        if (self._target_temperature_sensor == LUX_SENSOR_HEATING_TARGET_CORRECTION):
+            new_target_correction = self.convert_target_temp_into_target_correction()
+
+            if (new_target_correction is not None) & (new_target_correction != self._attr_current_target_correction):
+                LOGGER.info(f"Luxtronik TargetTemp correction needs to change!")
+                LOGGER.info(f"Correction: {self._attr_current_target_correction} --> {new_target_correction} ")  
+                
+                self._luxtronik.write(self._target_temperature_sensor.split('.')[
+                                          1], new_target_correction, use_debounce=False, update_immediately_after_write=True)
+            else:
+                LOGGER.info(f"Luxtronik TargetTemp correction ({self._attr_current_target_correction}) can remain unchanged ")   
+                
+            LOGGER.info(f"====================================")
+            
         return self._attr_current_temperature
 
     @property
     def target_temperature(self) -> float:
         """Return the temperature we try to reach."""
+        LOGGER.info(f"{self}: def target_temperature")
         if self._target_temperature_sensor is None:
             return self._attr_target_temperature
+        elif (self._attr_target_temperature is None) & (self._target_temperature_sensor == LUX_SENSOR_HEATING_TARGET_CORRECTION) :
+            target_temp = self.convert_target_correction_into_target_temp()
+            self._attr_target_temperature = target_temp
+        elif (self._target_temperature_sensor == LUX_SENSOR_HEATING_TARGET_CORRECTION):
+            self._attr_target_temperature = self._attr_target_temperature
         elif self.__is_luxtronik_sensor(self._target_temperature_sensor):
             self._attr_target_temperature = self._luxtronik.get_value(
                 self._target_temperature_sensor)
@@ -193,22 +220,113 @@ class LuxtronikThermostat(ClimateEntity, RestoreEntity):
     @callback
     def _async_update_temp(self, state):
         """Update thermostat with latest state from sensor."""
+        LOGGER.info("def _async_update_temp")
         try:
             cur_temp = float(state.state)
             if math.isnan(cur_temp) or math.isinf(cur_temp):
                 raise ValueError(f"Sensor has illegal state {state.state}")
-            self._attr_current_temperature = cur_temp
+            if cur_temp != self._attr_current_temperature:
+                self._attr_current_temperature = cur_temp
+            else:
+                LOGGER,info(f'Room temp unchanged ({cur_temp})')
         except ValueError as ex:
             LOGGER.error("Unable to update from sensor: %s", ex)
+            
+    def convert_target_correction_into_target_temp(self):
+        LOGGER.info(f"=== BETA Luxtronik Thermostat ===")
+        LOGGER.info(f"== Correction --> Target Temp  ==")
+        
+        current_target_correction = self._luxtronik.get_value(
+                self._target_temperature_sensor)
+        self._attr_current_target_correction = current_target_correction  
+        LOGGER.info(f"current correct: {current_target_correction}")
+        
+        influence_factor = 100.0
+        LOGGER.info(f"influence_factor: {influence_factor}")
+        deltaT = current_target_correction * (100.0/influence_factor) 
+        room_temp   = self._attr_current_temperature
+        LOGGER.info(f"current room temperature: {room_temp}")
+        
+        has_RBE = self._luxtronik.get_value("parameters.ID_Einst_RFVEinb_akt") != 0
+        if has_RBE:
+            LOGGER.info(f"RBE detected!")
+            RBE_target_temp = self._luxtronik.get_value("calculations.ID_WEB_RBE_RT_Soll")
+            LOGGER.info(f"RBE_target_temp: {RBE_target_temp}")
+            target_temp = round(RBE_target_temp + deltaT,2)
+        else:
+            LOGGER.info(f"No RBE detected")
+            target_temp = round(room_temp + deltaT,2)
+            
+        LOGGER.info(f"based on current correction {current_target_correction}, --> target room temperature: {target_temp}")
+        LOGGER.info(f"====================================")
+         
+        return target_temp
+        
+    
+    def convert_target_temp_into_target_correction(self):
+        LOGGER.info(f"{self}: convert_target_temp_into_target_correction")
+        if self._attr_current_temperature is None:
+            return None
+        if self._attr_target_temperature is None:
+            return None
+        LOGGER.info(f"====================================")
+        LOGGER.info(f"=== BETA Luxtronik Thermostat ===")
+        LOGGER.info(f"== Target Temp --> Correction  ==")
+        room_temp   = self._attr_current_temperature
+        LOGGER.info(f"current room temperature: {room_temp}")
+        target_temp = round(self._attr_target_temperature,2)
+        LOGGER.info(f"current target room temperature: {target_temp}")
+        
+        has_RBE = self._luxtronik.get_value("parameters.ID_Einst_RFVEinb_akt") != 0
+        if has_RBE:
+            LOGGER.info(f"RBE detected!")
+            RBE_target_temp = self._luxtronik.get_value("calculations.ID_WEB_RBE_RT_Soll")
+            LOGGER.info(f"RBE_target_temp: {RBE_target_temp}")
+            deltaT = round(target_temp - RBE_target_temp,2)
+            LOGGER.info(f"current deltaT to T_RBEtarget: {deltaT}")
+        else:
+            LOGGER.info(f"No RBE detected")
+            deltaT = round(target_temp - room_temp,2)
+            LOGGER.info(f"current deltaT to T_room: {deltaT}")
+        
+        influence_factor = 100.0
+        LOGGER.info(f"influence_factor: {influence_factor}")
+        new_target_correction = max(-5.0, min(+5.0, (influence_factor/100.0) * deltaT))
+        LOGGER.info(f"new_target_correction: {new_target_correction}" )
+        
+        # round target to nearest 0.5
+        new_target_correction = round(new_target_correction * 2) / 2
+        LOGGER.info(f"rounded new_target_correction: {new_target_correction}" )      
+        
+        self._attr_current_target_correction = new_target_correction
+        
+        return new_target_correction
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
+        LOGGER.info("def async_set_temperature")
         changed = False
         self._attr_target_temperature = kwargs[ATTR_TEMPERATURE]
-        if self._target_temperature_sensor is not None:
+        
+        if self._target_temperature_sensor is None:
+            changed = False
+        elif self._target_temperature_sensor == LUX_SENSOR_HEATING_TARGET_CORRECTION:
+            new_target_correction = self.convert_target_temp_into_target_correction()
+            current_target_correction = self._luxtronik.get_value(
+                        self._target_temperature_sensor)
+            if new_target_correction != current_target_correction:
+                LOGGER.info(f"Correction: {current_target_correction} --> {new_target_correction} ")
+                self._luxtronik.write(self._target_temperature_sensor.split('.')[
+                                      1], new_target_correction, use_debounce=False, update_immediately_after_write=True)
+                changed = True
+            else:
+                LOGGER.info(f"Correction unchanged: {current_target_correction} --> {new_target_correction} ")
+                changed = False
+        else:
             self._luxtronik.write(self._target_temperature_sensor.split('.')[
                                   1], self._attr_target_temperature, use_debounce=False, update_immediately_after_write=True)
             changed = True
+            
         if not await self._async_control_heating() and changed:
             self.schedule_update_ha_state(force_refresh=True)
     # endregion Temperatures
@@ -236,6 +354,7 @@ class LuxtronikThermostat(ClimateEntity, RestoreEntity):
     @property
     def hvac_action(self):
         """Return the current mode."""
+        #LOGGER.info("def hvac_action")
         new_hvac_action = self._attr_hvac_action
         status = self._luxtronik.get_value(self._status_sensor)
         if self._is_heating_on():
@@ -249,11 +368,12 @@ class LuxtronikThermostat(ClimateEntity, RestoreEntity):
         if new_hvac_action != self._attr_hvac_action:
             self._attr_hvac_action = new_hvac_action
             self._async_control_heating()
-        LOGGER.info("climate.hvac_action %s status: %s hvac_action: %s",
-                    self._attr_unique_id, status, new_hvac_action)
+        #LOGGER.info("climate.hvac_action %s status: %s hvac_action: %s",
+        #            self._attr_unique_id, status, new_hvac_action)
         return new_hvac_action
 
     async def _async_control_heating(self) -> bool:
+        LOGGER.info("def _async_control_heating")
         if not self._control_mode_home_assistant or self._attr_target_temperature is None or self._attr_current_temperature is None:  # Nothing Todo!
             LOGGER.info("climate._async_control_heating %s break!",
                         self._attr_unique_id)
@@ -286,6 +406,7 @@ class LuxtronikThermostat(ClimateEntity, RestoreEntity):
     @property
     def hvac_mode(self) -> str:
         """Return the current operation mode."""
+        #LOGGER.info("def hvac_mode")
         self._attr_hvac_mode = self.__get_hvac_mode(self.hvac_action)
         return self._attr_hvac_mode
 
@@ -363,6 +484,7 @@ class LuxtronikThermostat(ClimateEntity, RestoreEntity):
     async def _async_sensor_changed(self, event):
         """Handle temperature changes."""
         new_state = event.data.get("new_state")
+        LOGGER.info(f"_async_sensor_changed {event} --> {new_state}")
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
 
@@ -391,10 +513,10 @@ class LuxtronikHeatingThermostat(LuxtronikThermostat):
     _attr_icon = 'mdi:radiator'
     _attr_device_class: Final = f"{DOMAIN}__{_attr_unique_id}"
 
-    #_attr_target_temperature = 20.5
+    _attr_target_temperature = None
     _attr_target_temperature_step = 0.5
-    _attr_min_temp = -5.0
-    _attr_max_temp = +5.0
+    _attr_min_temp = +15.0
+    _attr_max_temp = +25.0
 
     _target_temperature_sensor: Final = LUX_SENSOR_HEATING_TARGET_CORRECTION
     _heater_sensor: Final = LUX_SENSOR_MODE_HEATING
