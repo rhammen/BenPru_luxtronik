@@ -916,22 +916,19 @@ class LuxtronikSensor(SensorEntity, RestoreEntity):
                 return LUX_STATUS1_HEATPUMP_SHUTDOWN
             # endregion Workaround Luxtronik Bug: Line 1 shows 'heatpump coming' on shutdown!
 
-        
-        # workaround to detect (passive) cooling active
+        # region Workaround Cooling: Detect passive cooling
         if (self._sensor_key == LUX_SENSOR_STATUS) and (value == LUX_STATUS_NO_REQUEST):     
             if self._luxtronik.detect_cooling_present():
                 T_in       = self._luxtronik.get_value("calculations.ID_WEB_Temperatur_TVL")
                 T_out      = self._luxtronik.get_value("calculations.ID_WEB_Temperatur_TRL")
                 T_heat_in  = self._luxtronik.get_value("calculations.ID_WEB_Temperatur_TWE") 
                 T_heat_out = self._luxtronik.get_value("calculations.ID_WEB_Temperatur_TWA") 
-                Flow_WQ    = self._luxtronik.get_value("calculations.ID_WEB_Durchfluss_WQ")     
-                
-                #LOGGER.info(f"T_in: {T_in}; T_out: {T_out}")
-                #LOGGER.info(f"T_heat_in: {T_heat_in}; T_heat_out: {T_heat_out}")
-                
+                Flow_WQ    = self._luxtronik.get_value("calculations.ID_WEB_Durchfluss_WQ")                    
                 if (T_out > T_in) and (T_heat_out > T_heat_in) and (Flow_WQ > 0):
                     #LOGGER.info(f"Cooling mode detected!!!")
                     return LUX_STATUS_COOLING
+                    # endregion Workaround Cooling: Detect passive cooling
+
         return value if value is None or self._factor is None else round(value * self._factor, 2)
 
     @property
