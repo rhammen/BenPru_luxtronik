@@ -158,6 +158,15 @@
             },
             "heating_night_lowering_to_temperature": {
                 "name": "Absenkung bis Aussentemperatur"
+            },
+            "cooling_threshold_temperature": {
+                "name": "T_aussen >"
+            },
+            "cooling_start_delay_hours": {
+                "name": "Start Verz\u00f6gerung"
+            },
+            "cooling_stop_delay_hours": {
+                "name": "Stop Verz\u00f6gerung"
             }
         },
         "sensor": {
