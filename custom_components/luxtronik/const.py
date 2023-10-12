@@ -243,7 +243,7 @@ class LuxParameter(StrEnum):
     P0090_RELEASE_SECOND_HEAT_GENERATOR: Final = "parameters.ID_Einst_ZWEFreig_akt"
     # MODE_COOLING: Automatic or Off
     P0108_MODE_COOLING: Final = "parameters.ID_Einst_BA_Kuehl_akt"
-    P0110_CURRENT_COOL_TARGET: Final = "parameters.ID_Einst_KuehlFreig_akt"
+    P0110_COOLING_OUTDOOR_TEMP_THRESHOLD: Final = "parameters.ID_Einst_KuehlFreig_akt"
     P0111_HEATING_NIGHT_LOWERING_TO_TEMPERATURE: Final = (
         "parameters.ID_Einst_TAbsMin_akt"
     )
@@ -259,6 +259,8 @@ class LuxParameter(StrEnum):
     )
     P0699_HEATING_THRESHOLD: Final = "parameters.ID_Einst_Heizgrenze"
     P0700_HEATING_THRESHOLD_TEMPERATURE: Final = "parameters.ID_Einst_Heizgrenze_Temp"
+    P0850_COOLING_START_DELAY_HOURS: Final = "parameters.ID_Einst_Kuhl_Zeit_Ein_akt"
+    P0851_COOLING_STOP_DELAY_HOURS: Final = "parameters.ID_Einst_Kuhl_Zeit_Aus_akt"
     P0860_REMOTE_MAINTENANCE: Final = "parameters.ID_Einst_Fernwartung_akt"
     P0864_PUMP_OPTIMIZATION_TIME: Final = "parameters.ID_Einst_Popt_Nachlauf_akt"
     P0869_EFFICIENCY_PUMP: Final = "parameters.ID_Einst_Effizienzpumpe_akt"
@@ -547,6 +549,9 @@ class SensorKey(StrEnum):
     APPROVAL_COOLING = "approval_cooling"
     ROOM_THERMOSTAT_TEMPERATURE = "room_thermostat_temperature"
     ROOM_THERMOSTAT_TEMPERATURE_TARGET = "room_thermostat_temperature_target"
+    COOLING_START_DELAY_HOURS = "cooling_start_delay_hours"
+    COOLING_STOP_DELAY_HOURS = "cooling_stop_delay_hours"
+    COOLING_OUTDOOR_TEMP_THRESHOLD = "cooling_threshold_temperature"
 
 
 # endregion Keys
