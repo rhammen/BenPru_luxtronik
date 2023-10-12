@@ -337,16 +337,48 @@ NUMBER_SENSORS: list[LuxtronikNumberDescription] = [
     ),
     # endregion Solar
     # endregion Domestic water
+    
     # region Cooling
-    # LuxtronikNumberDescription(
-    #     device_key=DeviceKey.cooling,
-    #     luxtronik_key=LP.P0108_MODE_COOLING,
-    #     key="cooling",
-    #     icon="mdi:snowflake",
-    #     entity_category=EntityCategory.CONFIG,
-    #     device_class=None,
-    #     on_state=LuxMode.automatic.value,
-    #     off_state=LuxMode.off.value,
-    # ),
+    #  To DO:  LUX_SENSOR_COOLING_TARGET:                   Final = "parameters.ID_Sollwert_KuCft2_akt"
+    LuxtronikNumberDescription(
+        key=SensorKey.COOLING_OUTDOOR_TEMP_THRESHOLD,
+        luxtronik_key=LP.P0110_COOLING_OUTDOOR_TEMP_THRESHOLD,
+        device_key=DeviceKey.cooling,
+        icon='mdi:sun-thermometer',
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        native_min_value=18.0,
+        native_max_value=30.0,
+        native_step=0.5,
+        #entity_category=EntityCategory.CONFIG,
+        mode=NumberMode.BOX,
+        visibility=LV.V0005_COOLING,
+    ),    
+    LuxtronikNumberDescription(
+        key=SensorKey.COOLING_START_DELAY_HOURS,
+        luxtronik_key=LP.P0850_COOLING_START_DELAY_HOURS,
+        device_key=DeviceKey.cooling,
+        icon='mdi:clock-start',
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        native_min_value=0.0,
+        native_max_value=12.0,
+        native_step=0.5,
+        #entity_category=EntityCategory.CONFIG,
+        mode=NumberMode.BOX,
+        visibility=LV.V0005_COOLING,
+    ),
+    LuxtronikNumberDescription(
+        key=SensorKey.COOLING_STOP_DELAY_HOURS,
+        luxtronik_key=LP.P0851_COOLING_STOP_DELAY_HOURS,
+        device_key=DeviceKey.cooling,
+        icon='mdi:clock-end',
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        native_min_value=0.0,
+        native_max_value=12.0,
+        native_step=0.5,
+        #entity_category=EntityCategory.CONFIG,
+        mode=NumberMode.BOX,
+        visibility=LV.V0005_COOLING,
+    ),
     # endregion Cooling
 ]
