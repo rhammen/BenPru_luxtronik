@@ -155,6 +155,15 @@
             },
             "heating_night_lowering_to_temperature": {
                 "name": "Ogrzewanie nocne obni\u017Caj\u0105ce temp"
+            },
+            "cooling_threshold_temperature": {
+                "name": "T_outside >"
+            },
+            "cooling_start_delay_hours": {
+                "name": "Start delay"
+            },
+            "cooling_stop_delay_hours": {
+                "name": "Stop delay"
             }
         },
         "sensor": {
