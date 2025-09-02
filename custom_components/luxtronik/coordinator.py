@@ -209,17 +209,18 @@ class LuxtronikCoordinator(DataUpdateCoordinator[LuxtronikCoordinatorData]):
         )
 
     def get_device(
-        self,
-        key: DeviceKey = DeviceKey.heatpump,
+        self, 
+        key: DeviceKey = DeviceKey.heatpump, 
         platform: EntityPlatform | None = None,
     ) -> DeviceInfo:
-        if key not in self.device_infos:
+        unique_key = f"{self.unique_id}_{key.value}"
+        if unique_key not in self.device_infos:
             self._create_device_infos(self.hass, self._config, platform)
-        device_info: DeviceInfo = self.device_infos.get(key)
+        device_info: DeviceInfo = self.device_infos.get(unique_key)
         if device_info["name"] == key:
             device_info["name"] = self._build_device_name(key, platform)
         return device_info
-
+    
     def _create_device_infos(
         self,
         hass: HomeAssistant,
@@ -227,23 +228,17 @@ class LuxtronikCoordinator(DataUpdateCoordinator[LuxtronikCoordinatorData]):
         platform: EntityPlatform | None = None,
     ):
         host = config[CONF_HOST]
-        self.device_infos[DeviceKey.heatpump.value] = self._build_device_info(
-            DeviceKey.heatpump, host, platform
-        )
-        via = (
-            DOMAIN,
-            f"{self.unique_id}_{DeviceKey.heatpump.value}".lower(),
-        )
-        self.device_infos[DeviceKey.heating.value] = self._build_device_info(
-            DeviceKey.heating, host, platform, via
-        )
-        self.device_infos[DeviceKey.domestic_water.value] = self._build_device_info(
-            DeviceKey.domestic_water, host, platform, via
-        )
-        self.device_infos[DeviceKey.cooling.value] = self._build_device_info(
-            DeviceKey.cooling, host, platform, via
-        )
-
+        # Create the main heatpump device info first
+        hp_key = f"{self.unique_id}_{DeviceKey['heatpump'].value}".lower()
+        self.device_infos[hp_key] = self._build_device_info(DeviceKey['heatpump'], host, platform)
+        
+        # Use the heatpump's unique key for 'via_device'
+        for hw in ['heating', 'domestic_water', 'cooling']:
+            key = f"{self.unique_id}_{DeviceKey[hw].value}".lower()
+            device_info = self._build_device_info(DeviceKey[hw], host, platform)
+            device_info['via_device'] = (DOMAIN, hp_key)
+            self.device_infos[key] = device_info
+    
     def _build_device_name(
         self, key: DeviceKey, platform: EntityPlatform | None = None
     ) -> str:
