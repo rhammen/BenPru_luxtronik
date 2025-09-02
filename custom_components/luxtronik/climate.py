@@ -216,7 +216,7 @@ class LuxtronikThermostat(LuxtronikEntity, ClimateEntity, RestoreEntity):
         super().__init__(
             coordinator=coordinator,
             description=description,
-            device_info_ident=description.device_key,
+            device_info_ident=f"{coordinator.unique_id}_{description.device_key.value}".lower(),
         )
         if description.luxtronik_key_current_temperature == LuxCalculation.UNSET:
             description.luxtronik_key_current_temperature = entry.data.get(

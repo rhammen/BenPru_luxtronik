@@ -32,7 +32,7 @@ async def async_setup_entry(
     async_add_entities(
         (
             LuxtronikSwitchEntity(
-                hass, entry, coordinator, description, description.device_key
+                hass, entry, coordinator, description, f"{coordinator.unique_id}_{description.device_key.value}".lower()
             )
             for description in SWITCHES
             if coordinator.entity_active(description)
