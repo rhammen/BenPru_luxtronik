@@ -53,7 +53,7 @@ class LuxtronikSwitchEntity(LuxtronikEntity, SwitchEntity):
         entry: ConfigEntry,
         coordinator: LuxtronikCoordinator,
         description: LuxtronikSwitchDescription,
-        device_info_ident: DeviceKey,
+        device_info_ident: str,
     ) -> None:
         """Init Luxtronik Switch."""
         super().__init__(

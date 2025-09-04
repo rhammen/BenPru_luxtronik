@@ -50,7 +50,7 @@ class LuxtronikEntity(CoordinatorEntity[LuxtronikCoordinator], RestoreEntity):
         self,
         coordinator: LuxtronikCoordinator,
         description: LuxtronikEntityDescription,
-        device_info_ident: DeviceKey,
+        device_info_ident: str,
     ) -> None:
         """Init LuxtronikEntity."""
         super().__init__(coordinator=coordinator)
